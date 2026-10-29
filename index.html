@@ -398,7 +398,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 (function () {
   const PARTS = ["胸筋", "背筋", "肩", "腕", "脚", "お腹", "その他"];
   const DEFAULT_MACHINES = [
-    { n: "チェストプレス", p: "胸筋" }, { n: "ペックフライ", p: "胸筋" }, { n: "スタンディング(胸)", p: "胸筋" },
+    { n: "チェストプレス", p: "胸筋" }, { n: "ペクトルフライ", p: "胸筋" }, { n: "スタンディング(胸)", p: "胸筋" },
     { n: "ラットプルダウン", p: "背筋" }, { n: "リバースフライ", p: "背筋" },
     { n: "サイドレイズ", p: "肩" },
     { n: "カールマシン", p: "腕" }, { n: "スカルクラッシャー", p: "腕" },
@@ -413,6 +413,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   const PART_VAR = { "胸筋": "--p-chest", "背筋": "--p-back", "肩": "--p-shoulder", "腕": "--p-arm", "脚": "--p-leg", "お腹": "--p-abs" };
   function partOf(n) { const m = machines.find((x) => x.n === n); return m ? m.p : "その他"; }
   function partColor(n) { return "var(" + (PART_VAR[partOf(n)] || "--p-other") + ")"; }
+  // Names that were merged into one exercise.
+  const ALIAS = { "ペックフライ": "ペクトルフライ", "ペクトラルフライ": "ペクトルフライ" };
+  function canon(n) { return ALIAS[n] || n; }
+  function mergeMachines(list) {
+    const out = [];
+    for (const m of list) { const n = canon(m.n); const ex = out.find((x) => x.n === n); if (ex) { if (!ex.memo && m.memo) ex.memo = m.memo; } else out.push(Object.assign({}, m, { n })); }
+    return out;
+  }
   function hasMachine(n) { return machines.some((x) => x.n === n); }
   const LS_KEY = "gymlog.v2";
   const $ = (id) => document.getElementById(id);
@@ -437,7 +445,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     "レッグプレス": [1.0, 1.8, 2.7, "l"],
     "ショルダープレス": [0.25, 0.45, 0.65, "u"],
     "シーテッドロー": [0.45, 0.7, 0.95, "u"],
-    "ペックフライ": [0.3, 0.5, 0.75, "u"],
+    "ペクトルフライ": [0.3, 0.5, 0.75, "u"],
     "レッグエクステンション": [0.35, 0.6, 0.9, "l"],
     "レッグカール": [0.3, 0.5, 0.7, "l"],
     "アブドミナル": [0.25, 0.45, 0.7, "u"],
@@ -480,7 +488,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       "肘を後ろに引き、肩甲骨を寄せる。肘は体の近くを通す",
       "一瞬止めてから、肩甲骨を開きながらゆっくり戻す"],
       ["上体を前後に振って反動を使う", "背中が丸まる", "肩がすくむ"]],
-    "ペックフライ": ["胸（大胸筋）", [
+    "ペクトルフライ": ["胸（大胸筋）", [
       "グリップかパッドが肩の高さになるようにシートを合わせる",
       "肘を少しだけ曲げた形で固定し、胸を張る",
       "腕で大きな円を描くように前で合わせ、胸をギュッと寄せる",
@@ -511,7 +519,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       "胸の伸びを感じるところまで、ゆっくり戻す"],
       ["上体を前に倒して体重で押す", "腰が反る（お腹に軽く力を入れておく）", "肩がすくんで前に出る"]],
     "リバースフライ": ["背中の上部・肩の後ろ（三角筋後部・菱形筋）", [
-      "ペックフライのマシンに胸をパッド側に向けて座り、グリップが肩の高さになるようにする",
+      "ペクトルフライのマシンに胸をパッド側に向けて座り、グリップが肩の高さになるようにする",
       "肘を少しだけ曲げた形で固定する",
       "腕を横に大きく開き、肩甲骨を寄せる",
       "一瞬止めてから、ゆっくり前に戻す"],
@@ -550,6 +558,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   // ---- local cache (fallback when the private store is unavailable) ----
   function loadLocal() {
     try { const raw = localStorage.getItem(LS_KEY); if (raw) { const o = JSON.parse(raw); entries = o.entries || []; machines = Array.isArray(o.machines2) ? o.machines2 : fromLegacy(o.machines); if (o.profile) profile = o.profile; } } catch (e) {}
+    let changed = false;
+    entries.forEach((e) => { if (ALIAS[e.machine]) { e.machine = canon(e.machine); changed = true; } });
+    const mm = mergeMachines(machines); if (mm.length !== machines.length || mm.some((m, i) => m.n !== machines[i].n)) changed = true; machines = mm;
+    if (changed) saveLocal();
   }
   function saveLocal() {
     try { localStorage.setItem(LS_KEY, JSON.stringify({ entries, machines2: machines, profile })); } catch (e) {}
@@ -1082,9 +1094,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   async function doImport(text) {
     const o = JSON.parse(text);
     const known = new Set(entries.map((e) => e.id));
+    (o.entries || []).forEach((e) => { if (e && ALIAS[e.machine]) e.machine = canon(e.machine); });
     const add = (o.entries || []).filter((e) => e && e.id && e.date && e.machine && typeof e.w === "number" && typeof e.r === "number" && !known.has(e.id));
-    for (const m of o.machines2 || []) if (m && m.n && !hasMachine(m.n)) machines.push({ n: m.n, p: m.p || "その他" });
-    for (const m of o.machines || []) if (typeof m === "string" && !hasMachine(m)) machines.push({ n: m, p: "その他" });
+    for (const m of o.machines2 || []) if (m && m.n && !hasMachine(canon(m.n))) machines.push({ n: canon(m.n), p: m.p || "その他" });
+    for (const m of o.machines || []) if (typeof m === "string" && !hasMachine(canon(m))) machines.push({ n: canon(m), p: "その他" });
     if (o.profile && typeof o.profile === "object" && !profile.bw && !profile.age) { profile = Object.assign({}, profile, o.profile); await persistProfile(); }
     // Add everything locally first, then save once; large imports would be slow saved one by one.
     for (const e of add) entries.push(e);
@@ -1137,8 +1150,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
           const ids = new Set(remote.map((e) => e.id));
           pending.filter((e) => !ids.has(e.id)).forEach((e) => { remote.push(e); col.doc(e.id).set(e).catch(() => {}); });
         }
+        remote.forEach((e) => { if (ALIAS[e.machine]) { e.machine = canon(e.machine); col.doc(e.id).set(e).catch(() => {}); } });
         entries = remote;
-        if (Array.isArray(ml)) machines = ml.map((x) => Object.assign({}, x));
+        if (Array.isArray(ml)) { const mm = mergeMachines(ml); const renamed = ml.some((x) => ALIAS[x.n]); machines = mm; if (renamed) col.doc("_machines").set({ list2: machines }).catch(() => {}); }
         saveLocal(); render();
       }, () => {});
     } catch (e) {}
