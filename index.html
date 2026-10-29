@@ -202,6 +202,11 @@ h1 { font-size: 20px; margin: 0; letter-spacing: .02em; }
   font: inherit; font-weight: 700; font-size: 18px; padding: 16px; min-height: 58px; border-radius: 12px; border: 0;
   background: var(--accent); color: var(--on-accent); cursor: pointer; letter-spacing: .04em;
 }
+.saverow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.timerbtn { font: inherit; min-width: 76px; border-radius: 12px; border: 2px solid var(--fg); background: var(--surface); color: var(--fg); cursor: pointer; display: grid; place-items: center; gap: 0; padding: 4px 8px; }
+.timerbtn span { font-size: 11px; font-weight: 700; }
+.timerbtn b { font-family: var(--font-num); font-size: 22px; line-height: 1; }
+.timerbtn:active { transform: scale(.96); }
 .save:disabled { opacity: .4; cursor: default; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .list { display: grid; gap: 14px; }
@@ -342,7 +347,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
   <section class="panel tabsec" data-tabs="set" aria-label="休憩タイマー">
     <div class="sechead"><h2>休憩タイマー</h2></div>
-    <div class="restset"><span>セットを記録すると自動で始まります</span><div class="seg" id="restSeg"></div></div>
+    <div class="restset"><span>「休憩」ボタンで始まる時間</span><div class="seg" id="restSeg"></div></div>
   </section>
 
   <section class="panel tabsec" data-tabs="set" aria-label="同年代の目安">
@@ -359,7 +364,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
   <section class="foot tabsec" data-tabs="set">
     <div id="storeNote"></div>
-    <div>アプリのバージョン：2026-10-30 拡大なし版</div>
+    <div>アプリのバージョン：2026-10-30 タイマーボタン版</div>
     <div class="row">
       <button type="button" id="exportBtn">バックアップを表示</button>
       <button type="button" id="importBtn">バックアップから復元</button>
@@ -398,7 +403,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
         </div>
       </div>
       <div class="preview" hidden><span id="setLabel">1セット目</span><span>ボリューム <b id="pvVol">200</b> kg</span></div>
-      <button class="save" id="saveBtn" type="button">このセットを記録</button>
+      <div class="saverow">
+        <button class="save" id="saveBtn" type="button">このセットを記録</button>
+        <button class="timerbtn" id="timerBtn" type="button"><span>休憩</span><b id="timerBtnSec">90秒</b></button>
+      </div>
     </div>
     <nav class="tabbar" role="tablist" aria-label="画面の切り替え">
       <button type="button" role="tab" data-tab="rec"><svg viewBox="0 0 24 24"><path d="M3 10v4M6 7v10M18 7v10M21 10v4M6 12h12"/></svg>記録</button>
@@ -1056,7 +1064,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   document.querySelectorAll("#chartSeg button").forEach((b) => b.addEventListener("click", () => { chartMode = b.dataset.mode; renderChart(); }));
 
   // ---- rest timer ----
-  const REST_OPTS = [0, 60, 90, 120, 180];
+  const REST_OPTS = [60, 90, 120, 180];
   let tEnd = 0, tTotal = 0, tTick = null, tDone = false, wake = null;
   function restSec() { const r = Number(profile.rest); return REST_OPTS.includes(r) ? r : 90; }
   function renderRestSeg() {
@@ -1065,12 +1073,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       const b = document.createElement("button"); b.type = "button";
       b.textContent = s ? s + "秒" : "オフ"; b.setAttribute("aria-pressed", String(restSec() === s));
       b.onclick = () => { profile.rest = s; renderRestSeg(); persistProfile(); };
+      $("timerBtnSec").textContent = restSec() + "秒";
       seg.appendChild(b);
     });
   }
   function fmtT(s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
   function startTimer() {
-    const s = restSec(); if (!s) return;
+    const s = restSec();
     tTotal = s; tEnd = Date.now() + s * 1000; tDone = false;
     $("timer").hidden = false; $("timer").classList.remove("done"); document.body.classList.add("timing");
     try { if (navigator.wakeLock && !wake) navigator.wakeLock.request("screen").then((w) => { wake = w; }, () => {}); } catch (e) {}
@@ -1095,6 +1104,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   $("tMinus").onclick = () => { if (!tDone) { tEnd -= 15000; tickTimer(); } };
   $("tPlus").onclick = () => { if (tDone) { tDone = false; tEnd = Date.now(); tTotal = 15; $("timer").classList.remove("done"); } tEnd += 15000; tTotal = Math.max(tTotal, (tEnd - Date.now()) / 1000); tickTimer(); };
   $("tStop").onclick = stopTimer;
+  $("timerBtn").onclick = startTimer;
   document.addEventListener("visibilitychange", () => { if (!document.hidden && tTick) tickTimer(); });
 
   // ---- tabs and bottom dock ----
@@ -1151,7 +1161,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     if (selDate > ymd(new Date())) return;
     const e = { id: uid(), date: selDate, machine: cur.machine, w: cur.w, r: cur.r, ts: Date.now() };
     entries.push(e);
-    persistEntry(e); render(); startTimer();
+    persistEntry(e); render();
     toast((e.date === ymd(new Date()) ? "" : md(e.date) + "に ") + e.machine + " " + n + "セット目 " + fmtW(e.w) + "kg × " + e.r + "回を記録");
   };
   $("backToday").onclick = () => {
