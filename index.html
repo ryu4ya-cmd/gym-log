@@ -249,7 +249,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
 .cal .dow { font-size: 11px; color: var(--muted); text-align: center; padding-bottom: 2px; }
 .day {
-  min-height: 64px; border-radius: 7px; border: 1px solid transparent; background: var(--bg); color: var(--muted);
+  min-height: 80px; border-radius: 7px; border: 1px solid transparent; background: var(--bg); color: var(--muted);
   cursor: pointer; padding: 3px 2px; display: flex; flex-direction: column; align-items: stretch; gap: 1px; text-align: left; min-width: 0;
   font: inherit;
 }
@@ -847,8 +847,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       const b = document.createElement("button"); b.type = "button";
       b.className = "day" + (names.length ? " has" : "") + (key === today ? " is-today" : "") + (key === selDate ? " sel" : "");
       const dn = document.createElement("span"); dn.className = "d"; dn.textContent = d; b.appendChild(dn);
-      names.slice(0, 3).forEach((nm) => { const s = document.createElement("span"); s.className = "m"; s.textContent = nm; s.style.background = partColor(nm); b.appendChild(s); });
-      if (names.length > 3) { const s = document.createElement("span"); s.className = "more"; s.textContent = "他" + (names.length - 3); b.appendChild(s); }
+      names.slice(0, 4).forEach((nm) => { const s = document.createElement("span"); s.className = "m"; s.textContent = nm; s.style.background = partColor(nm); b.appendChild(s); });
+      if (names.length > 4) { const s = document.createElement("span"); s.className = "more"; s.textContent = "他" + (names.length - 4); b.appendChild(s); }
       b.setAttribute("aria-label", (m + 1) + "月" + d + "日" + (names.length ? "、" + names.join("、") : ""));
       b.onclick = () => { selDate = key; render(); };
       cal.appendChild(b);
@@ -1236,7 +1236,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
   // ---- updates: the home-screen app can keep an old copy, so check for a newer one ----
-  const APP_VERSION = "2026-10-30a";
+  const APP_VERSION = "2026-10-30b";
   $("appVer").textContent = APP_VERSION;
   function reloadFresh() { location.replace(location.pathname + "?v=" + Date.now()); }
   $("updBtn").onclick = reloadFresh; $("updNow").onclick = reloadFresh;
