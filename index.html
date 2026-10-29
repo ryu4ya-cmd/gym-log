@@ -1072,7 +1072,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   $("nextM").onclick = () => { viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1); renderCal(); };
 
   $("exportBtn").onclick = async () => {
-    const ta = $("backup"); ta.hidden = false; ta.value = JSON.stringify({ entries, machines2: machines });
+    const ta = $("backup"); ta.hidden = false; ta.value = JSON.stringify({ entries, machines2: machines, profile });
     ta.select();
     try { await navigator.clipboard.writeText(ta.value); toast("バックアップをコピーしました"); } catch (e) { toast("表示した文字を長押しでコピーしてください"); }
   };
@@ -1086,6 +1086,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       for (const e of add) { entries.push(e); await persistEntry(e); }
       for (const m of o.machines2 || []) if (m && m.n && !hasMachine(m.n)) machines.push({ n: m.n, p: m.p || "その他" });
       for (const m of o.machines || []) if (typeof m === "string" && !hasMachine(m)) machines.push({ n: m, p: "その他" });
+      if (o.profile && typeof o.profile === "object" && !profile.bw && !profile.age) { profile = Object.assign({}, profile, o.profile); await persistProfile(); }
       await persistMachines(); ta.hidden = true; render(); toast(add.length + "件を復元しました");
     } catch (e) { toast("読み込めませんでした。コピーした文字をそのまま貼り付けてください"); }
   };
