@@ -359,7 +359,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
   <section class="foot tabsec" data-tabs="set">
     <div id="storeNote"></div>
-    <div>アプリのバージョン：2026-10-29 グラフ詳細版</div>
+    <div>アプリのバージョン：2026-10-29 グラフ連動版</div>
     <div class="row">
       <button type="button" id="exportBtn">バックアップを表示</button>
       <button type="button" id="importBtn">バックアップから復元</button>
@@ -1105,7 +1105,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     document.querySelectorAll(".tabbar button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
   }
   document.querySelectorAll(".tabbar button").forEach((b) => b.addEventListener("click", () => {
-    tab = b.dataset.tab; if (tab === "graph") chartMachine = chartMachine || cur.machine;
+    tab = b.dataset.tab;
+    // Open the graph on the exercise picked in the record tab.
+    if (tab === "graph" && cur.machine && chartMachine !== cur.machine) { chartMachine = cur.machine; chartSel = null; }
     renderTabs(); if (tab === "graph") renderChart(); window.scrollTo(0, 0);
   }));
   $("recThisDay").onclick = () => { tab = "rec"; renderTabs(); window.scrollTo(0, 0); };
