@@ -267,6 +267,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .foot button { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
 .foot .filebtn { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
 .foot textarea { width: 100%; min-height: 70px; font: 16px/1.4 ui-monospace, monospace; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg); padding: 8px; }
+.topbar { position: fixed; left: 0; right: 0; top: 0; z-index: 30; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); pointer-events: none; }
+.topbar .timer { max-width: 520px; margin: 0 auto; pointer-events: auto; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.wrap { padding-top: calc(var(--topH, 0px) + 16px) !important; }
 .bottom {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -367,7 +370,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
   <section class="foot tabsec" data-tabs="set">
     <div id="storeNote"></div>
-    <div>アプリのバージョン：2026-10-30 大きいタイマー版</div>
+    <div>アプリのバージョン：2026-10-30 タイマー上部版</div>
     <div class="row">
       <button type="button" id="exportBtn">バックアップを表示</button>
       <button type="button" id="importBtn">バックアップから復元</button>
@@ -378,17 +381,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   </section>
 </div>
 
+<div class="topbar" id="topbar">
+    <div class="timer" id="timer" hidden>
+    <div class="tleft"><span class="tl" id="tLabel">休憩中</span><b id="tTime">1:30</b></div>
+    <div class="tbtns">
+      <button type="button" id="tMinus">−15秒</button>
+      <button type="button" id="tPlus">＋15秒</button>
+      <button type="button" id="tStop">閉じる</button>
+    </div>
+    <div class="tbar"><span id="tFill"></span></div>
+  </div>
+</div>
 <div class="bottom" id="bottom">
   <div class="inner">
-    <div class="timer" id="timer" hidden>
-      <div class="tleft"><span class="tl" id="tLabel">休憩中</span><b id="tTime">1:30</b></div>
-      <div class="tbtns">
-        <button type="button" id="tMinus">−15秒</button>
-        <button type="button" id="tPlus">＋15秒</button>
-        <button type="button" id="tStop">閉じる</button>
-      </div>
-      <div class="tbar"><span id="tFill"></span></div>
-    </div>
     <div class="dock" id="dock">
       <div class="datebar" id="dateBar" hidden><span id="dateTxt"></span><button type="button" class="linkbtn" id="backToday">今日に戻す</button></div>
       <div class="steppers">
@@ -1086,7 +1091,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     tTotal = s; tEnd = Date.now() + s * 1000; tDone = false;
     $("timer").hidden = false; $("timer").classList.remove("done"); document.body.classList.add("timing");
     try { if (navigator.wakeLock && !wake) navigator.wakeLock.request("screen").then((w) => { wake = w; }, () => {}); } catch (e) {}
-    clearInterval(tTick); tTick = setInterval(tickTimer, 250); tickTimer();
+    clearInterval(tTick); tTick = setInterval(tickTimer, 250); tickTimer(); syncBottom();
   }
   function tickTimer() {
     const left = (tEnd - Date.now()) / 1000;
@@ -1101,7 +1106,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     }
   }
   function stopTimer() {
-    clearInterval(tTick); tTick = null; $("timer").hidden = true; document.body.classList.remove("timing");
+    clearInterval(tTick); tTick = null; $("timer").hidden = true; document.body.classList.remove("timing"); syncBottom();
     try { if (wake) { wake.release(); wake = null; } } catch (e) {}
   }
   $("tMinus").onclick = () => { if (!tDone) { tEnd -= 15000; tickTimer(); } };
@@ -1124,8 +1129,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     renderTabs(); if (tab === "graph") renderChart(); window.scrollTo(0, 0);
   }));
   $("recThisDay").onclick = () => { tab = "rec"; renderTabs(); window.scrollTo(0, 0); };
-  function syncBottom() { document.documentElement.style.setProperty("--bottomH", $("bottom").offsetHeight + "px"); }
-  try { new ResizeObserver(syncBottom).observe($("bottom")); } catch (e) { setInterval(syncBottom, 1000); }
+  function syncBottom() {
+    document.documentElement.style.setProperty("--bottomH", $("bottom").offsetHeight + "px");
+    document.documentElement.style.setProperty("--topH", ($("timer").hidden ? 0 : $("topbar").offsetHeight) + "px");
+  }
+  try { const ro = new ResizeObserver(syncBottom); ro.observe($("bottom")); ro.observe($("topbar")); } catch (e) { setInterval(syncBottom, 1000); }
   renderTabs(); syncBottom();
 
   // ---- interactions ----
