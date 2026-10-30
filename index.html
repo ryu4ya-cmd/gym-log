@@ -953,7 +953,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   let chartMachine = null;
   let chartRange = 90;          // days shown; 0 = all
   let chartSel = null;          // date of the tapped point
-  const RANGES = [[365, "1年"], [180, "半年"], [90, "3か月"], [30, "1か月"], [7, "1週間"]];
+  const RANGES = [[365, "1年"], [180, "半年"], [90, "3か月"], [30, "1か月"], [7, "1週間"], [0, "全期間"]];
   function renderChart() {
     const cm = chartMachine || cur.machine || (machines[0] && machines[0].n) || null;
     const sel = $("chartMachine"); sel.textContent = "";
@@ -1236,7 +1236,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
   // ---- updates: the home-screen app can keep an old copy, so check for a newer one ----
-  const APP_VERSION = "2026-10-30b";
+  const APP_VERSION = "2026-10-30c";
   $("appVer").textContent = APP_VERSION;
   function reloadFresh() { location.replace(location.pathname + "?v=" + Date.now()); }
   $("updBtn").onclick = reloadFresh; $("updNow").onclick = reloadFresh;
