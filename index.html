@@ -223,6 +223,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .setrow { display: grid; grid-template-columns: 4.6em 1fr auto auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .setrow:last-child { border-bottom: 0; }
 .setrow .no { font-size: 12px; color: var(--muted); }
+.setrow .specw { display: grid; gap: 1px; min-width: 0; justify-items: start; }
+.setrow .pv { font-size: 11px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.setrow .pv.up { color: var(--good); } .setrow .pv.down { color: var(--danger); }
+.setrow.ghost .no, .setrow.ghost .pv { opacity: .75; }
+.setrow.ghost .spec { color: var(--muted); font-family: inherit; font-size: 13px; }
 .setrow .spec, .setrow .vol { font-family: var(--font-num); font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .setrow .vol { color: var(--muted); font-size: 15px; }
 .setrow .del { font: inherit; font-size: 12px; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 6px 2px; }
@@ -781,6 +786,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       const tb = document.createElement("b"); tb.textContent = fmtN(gv);
       t.append(gs + "セット・", tb, " kg");
       h.append(n, t); g.appendChild(h);
+      // 前回 for this machine, one value per set, to show beside each set.
+      const before = entries.filter((e) => e.machine === m && e.date < selDate);
+      const pd = before.reduce((x, e) => (e.date > x ? e.date : x), "");
+      const prev = [];
+      before.filter((e) => e.date === pd).sort((a, b) => a.ts - b.ts).forEach((e) => { for (let i = 0; i < setsOf(e); i++) prev.push(e); });
+      const pvText = (p) => "前回 " + fmtW(p.w) + "kg×" + p.r;
       let no = 0;
       for (const e of sets) {
         const k = setsOf(e); no += k;
@@ -824,10 +835,28 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
         const s = document.createElement("button"); s.type = "button"; s.className = "spec"; s.textContent = fmtW(e.w) + "kg × " + e.r + "回" + (k > 1 ? " × " + k : "");
         s.setAttribute("aria-label", s.textContent + "を直す");
         s.onclick = () => { editId = e.id; renderDay(); };
+        const sw = document.createElement("div"); sw.className = "specw"; sw.appendChild(s);
+        const p = prev[no - k];
+        if (p) {
+          const pv = document.createElement("span"); pv.className = "pv";
+          const dv = e.w * e.r - p.w * p.r;
+          if (dv > 0) pv.classList.add("up"); else if (dv < 0) pv.classList.add("down");
+          pv.textContent = pvText(p) + (dv > 0 ? " ↑" : dv < 0 ? " ↓" : "");
+          sw.appendChild(pv);
+        }
         const v = document.createElement("span"); v.className = "vol"; v.textContent = "= " + fmtN(volOf(e));
         const fix = document.createElement("button"); fix.type = "button"; fix.className = "del"; fix.textContent = "直す";
         fix.onclick = s.onclick;
-        row.append(c, s, v, fix); g.appendChild(row);
+        row.append(c, sw, v, fix); g.appendChild(row);
+      }
+      // Sets done 前回 but not yet today.
+      for (let i = no; i < prev.length; i++) {
+        const row = document.createElement("div"); row.className = "setrow ghost";
+        const c = document.createElement("span"); c.className = "no"; c.textContent = (i + 1) + "セット目";
+        const sw = document.createElement("div"); sw.className = "specw";
+        const s = document.createElement("span"); s.className = "spec"; s.textContent = "まだ";
+        const pv = document.createElement("span"); pv.className = "pv"; pv.textContent = pvText(prev[i]);
+        sw.append(s, pv); row.append(c, sw); g.appendChild(row);
       }
       list.appendChild(g);
     }
@@ -1236,7 +1265,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
   // ---- updates: the home-screen app can keep an old copy, so check for a newer one ----
-  const APP_VERSION = "2026-10-30c";
+  const APP_VERSION = "2026-11-05a";
   $("appVer").textContent = APP_VERSION;
   function reloadFresh() { location.replace(location.pathname + "?v=" + Date.now()); }
   $("updBtn").onclick = reloadFresh; $("updNow").onclick = reloadFresh;
