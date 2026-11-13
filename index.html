@@ -1157,11 +1157,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     $("dock").hidden = tab !== "rec";
     document.querySelectorAll(".tabbar button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
   }
+  // Remember how far each tab was scrolled, so coming back returns to the same place.
+  const tabScroll = {};
   document.querySelectorAll(".tabbar button").forEach((b) => b.addEventListener("click", () => {
-    tab = b.dataset.tab;
+    const next = b.dataset.tab;
+    if (next === tab) { window.scrollTo(0, 0); return; }
+    tabScroll[tab] = window.scrollY;
+    tab = next;
     // Open the graph on the exercise picked in the record tab.
     if (tab === "graph" && cur.machine && chartMachine !== cur.machine) { chartMachine = cur.machine; chartSel = null; }
-    renderTabs(); if (tab === "graph") renderChart(); window.scrollTo(0, 0);
+    renderTabs(); if (tab === "graph") renderChart();
+    const y = tabScroll[tab] || 0;
+    window.scrollTo(0, y); requestAnimationFrame(() => window.scrollTo(0, y));
   }));
   $("recThisDay").onclick = () => { tab = "rec"; renderTabs(); window.scrollTo(0, 0); };
   function syncBottom() {
@@ -1266,7 +1273,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
   // ---- updates: the home-screen app can keep an old copy, so check for a newer one ----
-  const APP_VERSION = "2026-11-08 オフライン版";
+  const APP_VERSION = "2026-11-14 スクロール位置保持版";
   $("appVer").textContent = APP_VERSION;
   function reloadFresh() { location.replace(location.pathname + "?v=" + Date.now()); }
   // ---- offline: keep the app inside the iPhone so it opens even when the server is down ----
