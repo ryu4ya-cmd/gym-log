@@ -697,7 +697,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     for (const e of entries) if (e.machine === m && (!best || e.date > best.date || (e.date === best.date && e.ts > best.ts))) best = e;
     return best;
   }
-  function applyLast(m) { const l = lastFor(m); if (l) { cur.w = l.w; cur.r = l.r; } }
+  // Starting a machine: if sets are already recorded on this day, continue from the last one;
+  // otherwise start from the heaviest set of the previous session.
+  function applyLast(m) {
+    const day = entries.filter((e) => e.machine === m && e.date === selDate);
+    if (day.length) { const l = day.reduce((a, e) => (e.ts > a.ts ? e : a)); cur.w = l.w; cur.r = l.r; return; }
+    let prev = null;
+    for (const e of entries) if (e.machine === m && e.date < selDate && (!prev || e.date > prev)) prev = e.date;
+    if (!prev) { const l = lastFor(m); if (l) { cur.w = l.w; cur.r = l.r; } return; }
+    const top = entries.filter((e) => e.machine === m && e.date === prev).reduce((a, e) => (!a || e.w > a.w || (e.w === a.w && e.r > a.r) ? e : a), null);
+    cur.w = top.w; cur.r = top.r;
+  }
   function renderLast() {
     const box = $("lastInfo");
     if (!cur.machine) { box.textContent = "使ったマシンをタップ。前回の重さと回数が自動で入ります。"; return; }
@@ -1273,7 +1283,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
   // ---- updates: the home-screen app can keep an old copy, so check for a newer one ----
-  const APP_VERSION = "2026-11-14 スクロール位置保持版";
+  const APP_VERSION = "2026-11-17 前回最高重量スタート版";
   $("appVer").textContent = APP_VERSION;
   function reloadFresh() { location.replace(location.pathname + "?v=" + Date.now()); }
   // ---- offline: keep the app inside the iPhone so it opens even when the server is down ----
